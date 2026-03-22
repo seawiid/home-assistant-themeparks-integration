@@ -14,11 +14,14 @@ from .const import (
     DESTINATIONS,
     DESTINATIONS_URL,
     DOMAIN,
+    ID,
     METHOD_GET,
     NAME,
+    PARKS,
     PARKNAME,
     PARKSLUG,
     SLUG,
+    STEP_PARK,
     STEP_USER,
 )
 
@@ -27,10 +30,18 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Theme Park Wait Times."""
 
     VERSION = 1
-    _destinations: dict[str, Any] = {}
 
-    async def _async_fetch_destinations(self) -> dict[str, str]:
-        """Fetch the list of parks from the API. Returns {park_name: slug}."""
+    def __init__(self) -> None:
+        """Initialise the config flow."""
+        self._destinations: dict[str, Any] = {}
+        self._selected_destination: str = ""
+
+    async def _async_fetch_destinations(self) -> dict[str, Any]:
+        """Fetch destinations from the API.
+
+        Returns a dict of {destination_name: {slug, parks}} where parks is a
+        list of {id, name} dicts for each park within the destination.
+        """
         client = get_async_client(self.hass)
         response = await client.request(
             METHOD_GET,
@@ -44,25 +55,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         for item in parkdata.get(DESTINATIONS, []):
             slug = item.get(SLUG)
             name = item.get(NAME)
+            parks = item.get(PARKS, [])
             if slug and name:
-                result[name] = slug
+                result[name] = {SLUG: slug, PARKS: parks}
 
         return result
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
-        """Handle the initial step."""
+        """Step 1 — select a destination (e.g. Walt Disney World Resort)."""
         if user_input is not None:
-            park_name = user_input[PARKNAME]
-            park_slug = self._destinations[park_name]
-            return self.async_create_entry(
-                title=f"Theme Park: {park_name}",
-                data={
-                    PARKSLUG: park_slug,
-                    PARKNAME: park_name,
-                },
-            )
+            self._selected_destination = user_input[PARKNAME]
+            return await self.async_step_park()
 
         if not self._destinations:
             self._destinations = await self._async_fetch_destinations()
@@ -70,6 +75,43 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = {vol.Required(PARKNAME): vol.In(sorted(self._destinations.keys()))}
         return self.async_show_form(
             step_id=STEP_USER,
+            data_schema=vol.Schema(schema),
+            last_step=False,
+        )
+
+    async def async_step_park(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Step 2 — select an individual park within the destination."""
+        dest_data = self._destinations[self._selected_destination]
+        parks = dest_data.get(PARKS, [])
+
+        # Build {park_name: park_id} from the parks list returned by the API.
+        park_options: dict[str, str] = {
+            park[NAME]: park[ID]
+            for park in parks
+            if park.get(ID) and park.get(NAME)
+        }
+
+        # Single-park destination: skip the selector and create the entry immediately.
+        if len(park_options) == 1:
+            park_name, park_id = next(iter(park_options.items()))
+            return self.async_create_entry(
+                title=f"Theme Park: {park_name}",
+                data={PARKSLUG: park_id, PARKNAME: park_name},
+            )
+
+        if user_input is not None:
+            park_name = user_input[PARKNAME]
+            park_id = park_options[park_name]
+            return self.async_create_entry(
+                title=f"Theme Park: {park_name}",
+                data={PARKSLUG: park_id, PARKNAME: park_name},
+            )
+
+        schema = {vol.Required(PARKNAME): vol.In(sorted(park_options.keys()))}
+        return self.async_show_form(
+            step_id=STEP_PARK,
             data_schema=vol.Schema(schema),
             last_step=True,
         )

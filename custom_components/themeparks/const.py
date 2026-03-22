@@ -26,5 +26,8 @@ WAIT_TIME = "waitTime"
 LIVE = "live"
 STATUS = "status"
 
+PARKS = "parks"
+
 STEP_USER = "user"
+STEP_PARK = "park"
 METHOD_GET = "GET"
