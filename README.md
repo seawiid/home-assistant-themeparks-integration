@@ -2,6 +2,10 @@
 
 A Home Assistant custom component that pulls live wait time data from the [ThemeParks.wiki API](https://api.themeparks.wiki/v1) and creates sensor entities for each attraction at a selected theme park.
 
+## Changes in this fork (v1.2.1)
+
+- **Two-step park selection** — Setup now asks for a destination first (e.g. "Tokyo Disney Resort"), then presents the individual parks within it (e.g. "Tokyo Disneyland" vs. "Tokyo DisneySea"). Each park gets its own integration entry with its own set of sensors. Destinations with only one park skip the second screen automatically.
+
 ## Changes in this fork (v1.2.0)
 
 - **Fixed KeyError crash** — `_handle_coordinator_update` no longer crashes when an attraction disappears from the API between polls. The entity is gracefully marked unavailable instead.
@@ -19,7 +23,7 @@ A Home Assistant custom component that pulls live wait time data from the [Theme
 3. Search for "Theme Park Wait Times" in HACS and install.
 4. Restart Home Assistant.
 5. Go to **Settings → Devices & Services → Add Integration** and search for **Theme Park Wait Times**.
-6. Select your park from the dropdown and confirm.
+6. Select a destination (resort) from the first dropdown, then select an individual park from the second. Repeat to add multiple parks as separate entries.
 
 ## Manual Installation
 
