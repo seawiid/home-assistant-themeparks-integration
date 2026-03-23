@@ -4,6 +4,7 @@ DOMAIN = "themeparks"
 
 PARKSLUG = "parkslug"
 PARKNAME = "parkname"
+DESTNAME = "destname"
 
 BASE_URL = "https://api.themeparks.wiki/v1"
 DESTINATIONS_URL = "%s/destinations" % BASE_URL

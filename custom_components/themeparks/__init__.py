@@ -11,6 +11,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.httpx_client import get_async_client
 
 from .const import (
+    DESTNAME,
     DOMAIN,
     ENTITY_BASE_URL,
     ENTITY_TYPE,
@@ -78,6 +79,8 @@ class ThemeParkAPI:
         self._config_entry = config_entry
         self._parkslug = config_entry.data[PARKSLUG]
         self._parkname = config_entry.data[PARKNAME]
+        # Fall back to park name if entry was created before DESTNAME was stored.
+        self._destname = config_entry.data.get(DESTNAME, config_entry.data[PARKNAME])
 
     async def async_initialize(self) -> None:
         """Initialize registries."""
@@ -98,7 +101,7 @@ class ThemeParkAPI:
                 continue
 
             raw_name = item.get(NAME, "Unknown Attraction")
-            name = f"{raw_name} ({self._parkname})"
+            name = f"{raw_name} ({self._destname})"
             status = item.get(STATUS)
 
             _LOGGER.debug("Parsed API item: %s (status=%s)", raw_name, status)

@@ -13,6 +13,7 @@ from homeassistant.helpers.httpx_client import get_async_client
 from .const import (
     DESTINATIONS,
     DESTINATIONS_URL,
+    DESTNAME,
     DOMAIN,
     ID,
     METHOD_GET,
@@ -93,21 +94,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if park.get(ID) and park.get(NAME)
         }
 
+        dest_name = self._selected_destination
+
+        def _make_entry(park_name: str, park_id: str):
+            # Include the destination name in the title only when the park
+            # name alone would be ambiguous (e.g. both Disneyland Paris and
+            # Disneyland Resort have a park called "Disneyland Park").
+            if park_name == dest_name:
+                title = f"Theme Park: {park_name}"
+            else:
+                title = f"Theme Park: {park_name} ({dest_name})"
+            return self.async_create_entry(
+                title=title,
+                data={PARKSLUG: park_id, PARKNAME: park_name, DESTNAME: dest_name},
+            )
+
         # Single-park destination: skip the selector and create the entry immediately.
         if len(park_options) == 1:
             park_name, park_id = next(iter(park_options.items()))
-            return self.async_create_entry(
-                title=f"Theme Park: {park_name}",
-                data={PARKSLUG: park_id, PARKNAME: park_name},
-            )
+            return _make_entry(park_name, park_id)
 
         if user_input is not None:
             park_name = user_input[PARKNAME]
             park_id = park_options[park_name]
-            return self.async_create_entry(
-                title=f"Theme Park: {park_name}",
-                data={PARKSLUG: park_id, PARKNAME: park_name},
-            )
+            return _make_entry(park_name, park_id)
 
         schema = {vol.Required(PARKNAME): vol.In(sorted(park_options.keys()))}
         return self.async_show_form(

@@ -1,18 +1,23 @@
-# Home Assistant Theme Parks Integration (Fixed Fork)
+# Home Assistant Theme Parks Integration (Fork)
 
 A Home Assistant custom component that pulls live wait time data from the [ThemeParks.wiki API](https://api.themeparks.wiki/v1) and creates sensor entities for each attraction at a selected theme park.
 
-## Changes in this fork (v1.2.1)
+> **Note on versioning:** The original integration was at v1.1.0 when this fork was created. Version numbers in this fork begin at v1.3.0 to clearly distinguish forked releases from the upstream source.
 
-- **Two-step park selection** — Setup now asks for a destination first (e.g. "Tokyo Disney Resort"), then presents the individual parks within it (e.g. "Tokyo Disneyland" vs. "Tokyo DisneySea"). Each park gets its own integration entry with its own set of sensors. Destinations with only one park skip the second screen automatically.
+---
+
+## Changes in this fork (v1.3.0)
+
+- **Resort-based sensor naming** — Sensors are now suffixed with the destination/resort name (e.g. "Disneyland Resort") rather than the individual park name. This prevents entity ID collisions when multiple parks within the same resort share a name — for example, both Disneyland Paris and Disneyland Resort have a park called "Disneyland Park", which previously caused duplicate entity names and `_2` suffixes.
+- **Clearer entry titles** — Config entries now show both the park name and destination name where needed (e.g. "Theme Park: Disneyland Park (Disneyland Paris)" vs "Theme Park: Disneyland Park (Disneyland Resort)").
 
 ## Changes in this fork (v1.2.0)
 
+- **Two-step park selection** — Setup now asks for a destination first (e.g. "Tokyo Disney Resort"), then presents the individual parks within it (e.g. "Tokyo Disneyland" vs "Tokyo DisneySea"). Each park gets its own integration entry with its own set of sensors. Destinations with only one park skip the second screen automatically.
 - **Fixed KeyError crash** — `_handle_coordinator_update` no longer crashes when an attraction disappears from the API between polls. The entity is gracefully marked unavailable instead.
 - **Fixed device linking** — Attraction entities are now correctly linked to their parent park device (fixes [#12](https://github.com/danielsmith-eu/home-assistant-themeparks-integration/issues/12)).
 - **Added `status` attribute** — Each sensor now exposes the API status (`OPERATING`, `DOWN`, `CLOSED`, `REFURBISHMENT`) as an entity attribute, making automations and template sensors more reliable (addresses [#15](https://github.com/danielsmith-eu/home-assistant-themeparks-integration/issues/15)).
 - **Defensive API parsing** — All API field lookups now use `.get()` to avoid crashes on malformed or unexpected responses.
-- **Config flow cleanup** — Minor defensive improvements to park list fetching.
 
 ---
 
@@ -49,18 +54,18 @@ Sensors update every **5 minutes**. If an attraction no longer appears in the AP
 
 ```yaml
 automation:
-  - alias: "Alert when Space Mountain is short"
+  - alias: "Alert when Space Mountain wait is short"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.space_mountain_magic_kingdom
+        entity_id: sensor.space_mountain_disneyland_resort
         below: 20
     condition:
       - condition: template
-        value_template: "{{ state_attr('sensor.space_mountain_magic_kingdom', 'status') == 'OPERATING' }}"
+        value_template: "{{ state_attr('sensor.space_mountain_disneyland_resort', 'status') == 'OPERATING' }}"
     action:
       - service: notify.mobile_app
         data:
-          message: "Space Mountain wait is only {{ states('sensor.space_mountain_magic_kingdom') }} minutes!"
+          message: "Space Mountain wait is only {{ states('sensor.space_mountain_disneyland_resort') }} minutes!"
 ```
 
 ---
